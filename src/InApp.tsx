@@ -14,6 +14,8 @@ export default function InApp({ userId, email, onSignOut }: Props) {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
+    // On identity change, immediately clear existing sessions to avoid flashing another user's data.
+    setSessions([]);
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);

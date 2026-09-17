@@ -7,8 +7,8 @@ type SessionRecord = Session & { userId: string };
 class SocrateDB extends Dexie {
   sessions!: Table<SessionRecord, [string, string]>; // primary key: [userId, id]
 
-  constructor() {
-    super('socrate');
+  constructor(dbName: string) {
+    super(dbName);
     this.version(1).stores({
       // Compound primary key on [userId+id]; index on userId and updatedAt
       sessions: '&[userId+id], userId, updatedAt'
@@ -16,7 +16,35 @@ class SocrateDB extends Dexie {
   }
 }
 
-const db = new SocrateDB();
+/**
+ * Maintain a single open Dexie instance per active Supabase user id.
+ * We deliberately separate DB names by user to hard-partition data:
+ *   - socrate_${userId}
+ * On identity change, we tear down the old instance and open the new one.
+ * We do NOT open any DB eagerly at module load.
+ */
+let activeDb: SocrateDB | null = null;
+let activeUserId: string | null = null;
+
+function ensureDbForUser(userId: string): SocrateDB {
+  if (!userId) {
+    throw new Error('ensureDbForUser requires a non-empty userId');
+  }
+  if (activeDb && activeUserId === userId) {
+    return activeDb;
+  }
+  // Close previous DB (if any) before switching identities
+  if (activeDb) {
+    try {
+      activeDb.close();
+      // eslint-disable-next-line no-empty
+    } catch {}
+  }
+  const dbName = `socrate_${userId}`;
+  activeDb = new SocrateDB(dbName);
+  activeUserId = userId;
+  return activeDb;
+}
 
 export type SessionStore = {
   get(id: string): Promise<Session | undefined>;
@@ -32,6 +60,7 @@ export type SessionStore = {
  * (KAN-11 will key by Supabase user.id; do not change Session shape here).
  */
 export function getSessionStore(userId: string = 'anonymous'): SessionStore {
+  const db = ensureDbForUser(userId);
   return {
     async get(id: string) {
       const rec = await db.sessions.get([userId, id]);
