@@ -183,10 +183,7 @@ button:disabled {
   border: none;
   padding: 0;
 }
-.phase-dot.reached,
-.phase-dot.current {
-  background: var(--accent); /* active */
-}
+.phase-dot.current { background: var(--accent); } /* only current filled */
 
 .ghost {
   background: transparent;

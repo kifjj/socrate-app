@@ -31,14 +31,22 @@ const phaseIndex: Record<Phase, number> = PHASE_ORDER.reduce((acc, p, i) => {
 }, {} as Record<Phase, number>);
 
 export function nextPhase(current: Phase): Phase {
+  // KAN-4 clamp: do not advance past write_points until later phases exist
   const idx = phaseIndex[current];
-  return PHASE_ORDER[Math.min(idx + 1, PHASE_ORDER.length - 1)];
+  const writeIdx = phaseIndex['write_points'];
+  if (idx >= writeIdx) return 'write_points';
+  return PHASE_ORDER[Math.min(idx + 1, writeIdx)];
 }
 
 export function canTransition(from: Phase, to: Phase): boolean {
-  return phaseIndex[to] >= phaseIndex[from];
+  // Disallow transitions beyond write_points (temporary clamp)
+  const writeIdx = phaseIndex['write_points'];
+  const toIdx = phaseIndex[to];
+  if (toIdx > writeIdx) return false;
+  return toIdx >= phaseIndex[from];
 }
 
 export function isTerminal(phase: Phase): boolean {
-  return phase === 'spaced_return';
+  // Treat write_points as terminal while later phases are unimplemented
+  return phase === 'write_points';
 }
