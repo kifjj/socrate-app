@@ -21,8 +21,8 @@ export default defineConfig({
         description: 'Desk writing PWA scaffold for Socrate',
         start_url: '/',
         display: 'standalone',
-        background_color: '#0b1021',
-        theme_color: '#0b1021'
+        background_color: '#F7F6F3',
+        theme_color: '#2D333B'
       }
     })
   ]

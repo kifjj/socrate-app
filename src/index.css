@@ -1,8 +1,12 @@
 :root {
-  --bg: #0b1021;
-  --fg: #e5e7eb;
-  --muted: #9ca3af;
-  --accent: #a78bfa;
+  --bg: #F7F6F3;
+  --surface: #FFFFFF;
+  --text: #1A1A1A;
+  --muted: #6B6B6B;
+  --border: #E5E2DC;
+  --accent: #2D333B;
+  /* Back-compat with existing CSS using --fg */
+  --fg: var(--text);
 }
 
 * {
@@ -28,7 +32,7 @@ a {
 
 button {
   background: var(--accent);
-  color: #0b1021;
+  color: var(--surface);
   border: none;
   padding: 0.6rem 1rem;
   border-radius: 0.5rem;
@@ -174,15 +178,13 @@ button:disabled {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  background: transparent;
+  background: #D4D0C8; /* inactive */
+  border: none;
   padding: 0;
 }
-.phase-dot.reached {
-  border-color: var(--accent);
-}
+.phase-dot.reached,
 .phase-dot.current {
-  background: var(--accent);
+  background: var(--accent); /* active */
 }
 
 .ghost {
