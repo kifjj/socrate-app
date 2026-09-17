@@ -90,7 +90,10 @@ export default function App() {
                   <strong>{s.id.slice(0, 8)}</strong> — phase {s.phase}
                 </span>
                 <span className="row">
-                  <button onClick={() => advance(s.id)} disabled={s.phase === PHASE_ORDER.at(-1)}>
+                  <button
+                    onClick={() => advance(s.id)}
+                    disabled={s.phase === PHASE_ORDER[PHASE_ORDER.length - 1]}
+                  >
                     Advance
                   </button>
                   <button onClick={() => remove(s.id)}>Delete</button>
