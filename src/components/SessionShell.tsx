@@ -264,7 +264,7 @@ export function SessionShell({ userId, email, onSignOut, sessionId, onExit }: Se
             onClick={() => void advance()}
             disabled={phase === 'write_points' ? !(trimmedCount >= 3 && trimmedCount <= 5) : false}
           >
-            Advance (Ctrl/⌘+Enter)
+            {phase === 'write_points' ? 'Done (Ctrl/⌘+Enter)' : 'Advance (Ctrl/⌘+Enter)'}
           </button>
         </div>
       </footer>
