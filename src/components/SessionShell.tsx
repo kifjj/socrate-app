@@ -43,7 +43,14 @@ export function SessionShell({ userId, email, onSignOut, sessionId, onExit }: Se
         // default drawer open only in paste
         setDrawerOpen((initial?.phase ?? 'paste') === 'paste');
         setEditorText((initial?.points ?? []).join('\n'));
-        setPointsDraft(initial?.points ?? []);
+        const pts = initial?.points ?? [];
+        if (initial?.phase === 'write_points' && pts.length === 0) {
+          const withSlot = [''];
+          setPointsDraft(withSlot);
+          void save({ id: initial.id, points: withSlot });
+        } else {
+          setPointsDraft(pts);
+        }
         setLoading(false);
       }
     })();
