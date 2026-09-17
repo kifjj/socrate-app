@@ -126,11 +126,11 @@ export function SessionShell({ userId, email, onSignOut, sessionId, onExit }: Se
         setPointsError(true);
         return;
       }
-      // Valid submission for this phase; stay on write_points (do not open elaborate)
+      // Soft-complete points: persist trimmed non-empty points and exit SessionShell.
       setPointsError(false);
-      setJustSubmitted(true);
-      setTimeout(() => setJustSubmitted(false), 1500);
-      await save({ id: sessionId, points: pointsDraft });
+      const finalized = pointsDraft.map((s) => s.trim()).filter((s) => s.length > 0);
+      await save({ id: sessionId, points: finalized });
+      onExit(); // keep phase as write_points; do not transition to elaborate
       return;
     }
     const next = nextPhase(cur);
