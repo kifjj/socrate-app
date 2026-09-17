@@ -82,7 +82,7 @@ button:disabled {
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--bg);
 }
 
 .shell-header .brand {
@@ -147,21 +147,22 @@ button:disabled {
 
 .editor-textarea {
   width: 100%;
-  max-width: 900px;
+  max-width: none; /* full-bleed writing surface */
   height: 100%;
   resize: none;
-  background: var(--surface);
+  background: transparent; /* sit directly on the cream page */
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1rem;
-  line-height: 1.5;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  padding: 1.25rem;
+  line-height: 1.6;
 }
 
 .shell-footer {
   padding: 0.75rem 1rem;
   border-top: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--bg);
   display: flex;
   justify-content: center;
 }
@@ -175,8 +176,8 @@ button:disabled {
 }
 
 .phase-dot {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #D4D0C8; /* inactive */
   border: none;
@@ -189,8 +190,9 @@ button:disabled {
 
 .ghost {
   background: transparent;
-  border: 1px solid var(--border);
+  border: none;
   color: var(--text);
+  padding: 0.25rem 0.5rem;
 }
 
 .spacer {
@@ -228,4 +230,20 @@ button:disabled {
 }
 .file-upload input {
   display: none;
+}
+
+/* Left edge Notes tab */
+.notes-tab {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  transform-origin: left top;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px 8px 0 0;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
