@@ -144,17 +144,6 @@ export function SessionShell({ userId, email, onSignOut, sessionId, onExit }: Se
             </button>
           ) : null}
           <div className="spacer" />
-          <button
-            type="button"
-            className="ghost"
-            onClick={() => (phase === 'paste' ? setDrawerOpen((v) => !v) : undefined)}
-            disabled={phase !== 'paste'}
-            aria-label="Toggle notes drawer"
-            title={phase === 'paste' ? 'Toggle notes (Esc to close)' : 'Notes hidden in this phase'}
-          >
-            Notes
-          </button>
-          <div className="spacer" />
           <button type="button" className="ghost" onClick={onExit}>
             Exit
           </button>
@@ -162,6 +151,18 @@ export function SessionShell({ userId, email, onSignOut, sessionId, onExit }: Se
       </header>
 
       <div className="shell-body">
+        {/* Left-edge Notes tab appears only in paste phase when drawer is closed */}
+        {phase === 'paste' && !showDrawer ? (
+          <button
+            type="button"
+            className="notes-tab"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Open notes drawer"
+            title="Open notes"
+          >
+            Notes
+          </button>
+        ) : null}
         {/* Notes drawer mounts only in paste and when open */}
         {showDrawer ? (
           <NotesDrawer
