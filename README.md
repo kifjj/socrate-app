@@ -7,7 +7,7 @@ Locked stack:
 - `vite-plugin-pwa` for installable PWA
 - Small typed enum + transitions for session phases (not XState)
 - Deploy: Vercel (Git integration; deploy-on-merge to `main`)
-- Auth later: Supabase Auth (Google allowlist) — not included in this PR
+- Auth: Supabase Auth (Google allowlist, KAN-12)
 
 ### Session model (architect lock)
 
@@ -87,13 +87,31 @@ Prefer Vercel’s Git integration over custom GitHub Actions.
 
 ### Environment variables (Auth later — KAN-12)
 
-Auth is intentionally out of scope here. When KAN-12 lands, expect to wire:
+Supabase Auth (Google) is wired in KAN-12. Required environment variables:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
-- Any allowlist configuration needed for Google sign-in
+- Allowlist is currently hardcoded to `aldojj@gmail.com` in `src/auth/AuthProvider.tsx`
 
 Do not commit real secrets. Use Vercel Project → Settings → Environment Variables for production/staging, and a local `.env` (ignored) for development.
+
+An `.env.example` is provided; copy to `.env` locally and fill in placeholders:
+
+```bash
+cp .env.example .env
+```
+
+#### Google OAuth redirect
+
+- In Supabase Auth → Providers → Google, set the redirect URL to your deployed domain (production) and Vercel preview domains as needed. During local dev, use your origin (e.g. `http://localhost:5173`).
+- This app uses `signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin }})`. Ensure that origin is allowed in Supabase.
+
+#### Gate behavior (KAN-12)
+
+- Flow: SignedOut → Google OAuth → AllowlistCheck → InApp | Denied
+- Denied users never see session/write UI. "Sign out" returns to SignedOut.
+- Dexie and session routes are initialized only after allowlist passes.
+- Soft re-gate on next load only: mid-session token blips do not clear drafts.
 
 ### Notes
 
