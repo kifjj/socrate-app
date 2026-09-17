@@ -64,7 +64,15 @@ export function getSessionStore(userId: string = 'anonymous'): SessionStore {
   return {
     async get(id: string) {
       const rec = await db.sessions.get([userId, id]);
-      return rec && stripUserId(rec);
+      if (!rec) return undefined;
+      // KAN-4: If phase is beyond write_points from legacy data, coerce and persist
+      const coercedPhase = coercePhase(rec.phase as Phase);
+      if (coercedPhase !== rec.phase) {
+        const updated: SessionRecord = { ...rec, phase: coercedPhase, updatedAt: Date.now() };
+        await db.sessions.put(updated);
+        return stripUserId(updated);
+      }
+      return stripUserId(rec);
     },
     async put(session: Session) {
       const now = Date.now();
@@ -74,7 +82,8 @@ export function getSessionStore(userId: string = 'anonymous'): SessionStore {
       const existing = await db.sessions.get([userId, partial.id]);
       const merged: Session = {
         id: partial.id,
-        phase: (partial.phase ?? existing?.phase ?? 'paste') as Phase,
+        // Clamp phase on write as well
+        phase: coercePhase((partial.phase ?? existing?.phase ?? 'paste') as Phase),
         sourceNotes: partial.sourceNotes ?? existing?.sourceNotes ?? '',
         points: partial.points ?? existing?.points ?? [],
         elaborations: partial.elaborations ?? existing?.elaborations ?? {},
@@ -93,7 +102,19 @@ export function getSessionStore(userId: string = 'anonymous'): SessionStore {
         .equals(userId)
         .reverse()
         .sortBy('updatedAt');
-      return rows.map(stripUserId);
+      // Coerce any legacy sessions and persist the correction
+      const coerced: Session[] = [];
+      for (const rec of rows) {
+        const nextPhase = coercePhase(rec.phase as Phase);
+        if (nextPhase !== rec.phase) {
+          const updated: SessionRecord = { ...rec, phase: nextPhase, updatedAt: Date.now() };
+          await db.sessions.put(updated);
+          coerced.push(stripUserId(updated));
+        } else {
+          coerced.push(stripUserId(rec));
+        }
+      }
+      return coerced;
     },
     async clearAll() {
       await db.sessions.where('userId').equals(userId).delete();
@@ -109,4 +130,16 @@ function stripUserId(rec: SessionRecord): Session {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { userId: _userId, ...session } = rec;
   return session;
+}
+
+// Legacy clamp: any phase beyond write_points should be coerced back
+function coercePhase(phase: Phase): Phase {
+  switch (phase) {
+    case 'elaborate':
+    case 'gap_review':
+    case 'spaced_return':
+      return 'write_points';
+    default:
+      return phase;
+  }
 }
