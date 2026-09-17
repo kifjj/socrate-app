@@ -194,7 +194,11 @@ export function SessionShell({ userId, email, onSignOut, sessionId, onExit }: Se
       </div>
 
       <footer className="shell-footer">
-        <button type="button" onClick={() => void advance()}>
+        <button
+          type="button"
+          onClick={() => void advance()}
+          disabled={phase === 'write_points'}
+        >
           Advance (Ctrl/⌘+Enter)
         </button>
       </footer>
