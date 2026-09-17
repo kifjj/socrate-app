@@ -48,8 +48,8 @@ const deskStyle: React.CSSProperties = {
 const panelStyle: React.CSSProperties = {
   width: '100%',
   maxWidth: 420,
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
   borderRadius: 12,
   padding: '1.25rem'
 };
