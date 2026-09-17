@@ -52,8 +52,8 @@ button:disabled {
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.25rem;
 }
@@ -81,8 +81,8 @@ button:disabled {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .shell-header .brand {
@@ -107,8 +107,8 @@ button:disabled {
   width: 360px;
   min-width: 280px;
   max-width: 480px;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border-right: 1px solid var(--border);
+  background: var(--surface);
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
@@ -125,9 +125,9 @@ button:disabled {
   width: 100%;
   flex: 1;
   resize: none;
-  background: transparent;
-  color: var(--fg);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.75rem;
 }
@@ -150,9 +150,9 @@ button:disabled {
   max-width: 900px;
   height: 100%;
   resize: none;
-  background: transparent;
-  color: var(--fg);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1rem;
   line-height: 1.5;
@@ -160,8 +160,8 @@ button:disabled {
 
 .shell-footer {
   padding: 0.75rem 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
   display: flex;
   justify-content: center;
 }
@@ -189,8 +189,8 @@ button:disabled {
 
 .ghost {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: var(--fg);
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 
 .spacer {
@@ -201,8 +201,8 @@ button:disabled {
   max-width: 720px;
   width: 100%;
   margin: auto;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1rem;
 }
@@ -210,15 +210,15 @@ button:disabled {
 .start-textarea {
   width: 100%;
   resize: vertical;
-  background: transparent;
-  color: var(--fg);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.75rem;
 }
 
 .file-upload {
-  border: 1px dashed rgba(255, 255, 255, 0.25);
+  border: 1px dashed var(--border);
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
   display: inline-flex;
