@@ -70,7 +70,7 @@ export default function InApp({ userId, email, onSignOut }: Props) {
           <span className="muted" style={{ fontSize: '0.9rem' }}>
             {email}
           </span>
-          <button onClick={onSignOut}>Sign out</button>
+          <button className="ghost" onClick={onSignOut}>Sign out</button>
         </div>
       </header>
 
