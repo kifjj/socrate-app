@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { PHASE_ORDER, type Phase, type Session, nextPhase } from './model/session';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { type Session } from './model/session';
 import { getSessionStore } from './db/sessionDB';
+import { SessionShell } from './components/SessionShell';
 
 type Props = {
   userId: string;
@@ -11,10 +12,11 @@ type Props = {
 export default function InApp({ userId, email, onSignOut }: Props) {
   const store = useMemo(() => getSessionStore(userId), [userId]);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [creating, setCreating] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const pasteStartRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
-    // On identity change, immediately clear existing sessions to avoid flashing another user's data.
+    // On identity change, immediately clear and refresh from this user's partition.
     setSessions([]);
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -25,38 +27,40 @@ export default function InApp({ userId, email, onSignOut }: Props) {
     setSessions(rows);
   }
 
-  async function createDemoSession() {
-    setCreating(true);
-    try {
-      const id = crypto.randomUUID();
-      const session: Session = {
-        id,
-        phase: 'paste',
-        sourceNotes: 'Paste your notes here…',
-        points: [],
-        elaborations: {},
-        gaps: [],
-        updatedAt: Date.now()
-      };
-      await store.put(session);
-      await refresh();
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  async function advance(id: string) {
-    const existing = await store.get(id);
-    if (!existing) return;
-    const next = nextPhase(existing.phase as Phase);
-    await store.upsert({ id, phase: next });
+  async function startNewSession(initialNotes?: string) {
+    const id = crypto.randomUUID();
+    const session: Session = {
+      id,
+      phase: 'paste',
+      sourceNotes: initialNotes ?? '',
+      points: [],
+      elaborations: {},
+      gaps: [],
+      updatedAt: Date.now()
+    };
+    await store.put(session);
     await refresh();
+    setActiveSessionId(id);
   }
 
   async function remove(id: string) {
     await store.remove(id);
     await refresh();
   }
+
+  if (activeSessionId) {
+    return (
+      <SessionShell
+        userId={userId}
+        email={email}
+        sessionId={activeSessionId}
+        onExit={() => setActiveSessionId(null)}
+        onSignOut={onSignOut}
+      />
+    );
+  }
+
+  const last = sessions[0];
 
   return (
     <div className="container">
@@ -74,15 +78,49 @@ export default function InApp({ userId, email, onSignOut }: Props) {
 
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Start a session</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
-          Create a new draft now, or come back later to resume. Sessions are stored locally and
-          private to your browser.
-        </p>
+        <p className="muted">Paste notes or upload a plain-text file to begin.</p>
         <div className="row">
-          <button onClick={createDemoSession} disabled={creating}>
-            {creating ? 'Creating…' : 'Create demo session'}
-          </button>
+          <button onClick={() => void startNewSession()}>Start a session</button>
+          {last ? (
+            <button className="ghost" onClick={() => setActiveSessionId(last.id)}>
+              Resume last session ({last.phase})
+            </button>
+          ) : null}
         </div>
+        <div style={{ height: 12 }} />
+        <textarea
+          ref={pasteStartRef}
+          className="start-textarea"
+          placeholder="Paste notes here to create a session…"
+          rows={6}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val && val.trim().length > 0) {
+              // Create once and then clear this surface
+              void startNewSession(val);
+            }
+          }}
+        />
+        <div style={{ height: 12 }} />
+        <label className="file-upload">
+          <input
+            type="file"
+            accept=".txt,text/plain"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                const text = String(reader.result ?? '');
+                void startNewSession(text);
+              };
+              reader.readAsText(file);
+              // reset input value to allow re-uploading same file later
+              e.currentTarget.value = '';
+            }}
+          />
+          Upload .txt
+        </label>
       </div>
 
       <div style={{ height: 24 }} />
@@ -99,25 +137,16 @@ export default function InApp({ userId, email, onSignOut }: Props) {
                   <strong>{s.id.slice(0, 8)}</strong> — phase {s.phase}
                 </span>
                 <span className="row">
-                  <button
-                    onClick={() => advance(s.id)}
-                    disabled={s.phase === PHASE_ORDER[PHASE_ORDER.length - 1]}
-                  >
-                    Advance
+                  <button onClick={() => setActiveSessionId(s.id)}>Open</button>
+                  <button className="ghost" onClick={() => remove(s.id)}>
+                    Delete
                   </button>
-                  <button onClick={() => remove(s.id)}>Delete</button>
                 </span>
               </li>
             ))}
           </ul>
         )}
       </div>
-
-      <div style={{ height: 24 }} />
-
-      <footer className="muted">
-        Phases: {PHASE_ORDER.join(' → ')}. Drafts persist locally via IndexedDB (Dexie).
-      </footer>
     </div>
   );
 }

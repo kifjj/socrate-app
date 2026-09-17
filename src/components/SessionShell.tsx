@@ -4,15 +4,16 @@ import { type Phase, type Session, nextPhase, canTransition } from '../model/ses
 import { getSessionStore, type SessionStore } from '../db/sessionDB';
 import { NotesDrawer } from './NotesDrawer';
 
-const DEFAULT_USER = 'anonymous';
-
 type SessionShellProps = {
+  userId: string;
+  email?: string;
+  onSignOut?: () => void;
   sessionId: string;
   onExit: () => void;
 };
 
-export function SessionShell({ sessionId, onExit }: SessionShellProps) {
-  const store = useMemo<SessionStore>(() => getSessionStore(DEFAULT_USER), []);
+export function SessionShell({ userId, email, onSignOut, sessionId, onExit }: SessionShellProps) {
+  const store = useMemo<SessionStore>(() => getSessionStore(userId), [userId]);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(true);
@@ -116,7 +117,7 @@ export function SessionShell({ sessionId, onExit }: SessionShellProps) {
         <header className="shell-header">
           <div className="brand">Socrate</div>
           <PhaseDots current={'paste'} />
-          <div className="account">anonymous</div>
+          <div className="account">{email ?? '—'}</div>
         </header>
         <main className="editor-area">
           <p className="muted">Loading session…</p>
@@ -134,6 +135,15 @@ export function SessionShell({ sessionId, onExit }: SessionShellProps) {
         <div className="brand">Socrate</div>
         <PhaseDots current={phase} />
         <div className="account">
+          <span className="muted" style={{ fontSize: '0.9rem' }}>
+            {email ?? ''}
+          </span>
+          {onSignOut ? (
+            <button type="button" className="ghost" onClick={onSignOut} title="Sign out">
+              Sign out
+            </button>
+          ) : null}
+          <div className="spacer" />
           <button
             type="button"
             className="ghost"
