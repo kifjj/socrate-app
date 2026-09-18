@@ -3,6 +3,7 @@ import { PhaseDots } from './PhaseDots';
 import { type Phase, type Session, nextPhase, canTransition } from '../model/session';
 import { getSessionStore, type SessionStore } from '../db/sessionDB';
 import { NotesDrawer } from './NotesDrawer';
+import { WritePoints } from './WritePoints';
 
 type SessionShellProps = {
   userId: string;
@@ -19,8 +20,12 @@ export function SessionShell({ userId, email, onSignOut, sessionId, onExit }: Se
   const [drawerOpen, setDrawerOpen] = useState(true);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Local editor text mirrors points (one per line)
+  // Local editor text mirrors points (one per line) for legacy view (non-write phases)
   const [editorText, setEditorText] = useState('');
+  // Write points local state (slots; may include empty strings)
+  const [pointsDraft, setPointsDraft] = useState<string[]>([]);
+  const [pointsError, setPointsError] = useState(false); // inline error when Advance pressed <3
+  const [justSubmitted, setJustSubmitted] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,10 +33,24 @@ export function SessionShell({ userId, email, onSignOut, sessionId, onExit }: Se
       setLoading(true);
       const s = await store.get(sessionId);
       if (!cancelled) {
-        setSession(s ?? null);
+        let initial = s ?? null;
+        // Coerce legacy later phases back to write_points (keep clamp from #7)
+        if (initial && (initial.phase === 'elaborate' || initial.phase === 'gap_review' || initial.phase === 'spaced_return')) {
+          initial = await save({ id: initial.id, phase: 'write_points' });
+        } else {
+          setSession(initial);
+        }
         // default drawer open only in paste
-        setDrawerOpen((s?.phase ?? 'paste') === 'paste');
-        setEditorText((s?.points ?? []).join('\n'));
+        setDrawerOpen((initial?.phase ?? 'paste') === 'paste');
+        setEditorText((initial?.points ?? []).join('\n'));
+        const pts = initial?.points ?? [];
+        if (initial?.phase === 'write_points' && pts.length === 0) {
+          const withSlot = [''];
+          setPointsDraft(withSlot);
+          void save({ id: initial.id, points: withSlot });
+        } else {
+          setPointsDraft(pts);
+        }
         setLoading(false);
       }
     })();
@@ -79,20 +98,44 @@ export function SessionShell({ userId, email, onSignOut, sessionId, onExit }: Se
       // Drawer visibility rules
       if (to === 'paste') setDrawerOpen(true);
       else setDrawerOpen(false);
-      // Update editorText when entering write_points to reflect current points
+      // Entering write_points: initialize points UI
       if (to === 'write_points') {
-        setEditorText((updated.points ?? []).join('\n'));
-        setTimeout(() => editorRef.current?.focus(), 0);
+        const pts = updated.points ?? [];
+        if (pts.length === 0) {
+          const withSlot = [''];
+          setPointsDraft(withSlot);
+          void save({ id: sessionId, points: withSlot });
+        } else {
+          setPointsDraft(pts);
+        }
+        setPointsError(false);
+        setJustSubmitted(false);
       }
     },
     [save, session?.phase, sessionId]
   );
 
+  const trimmedCount = useMemo(
+    () => pointsDraft.map((s) => s.trim()).filter((s) => s.length > 0).length,
+    [pointsDraft]
+  );
   const advance = useCallback(async () => {
     const cur = session?.phase ?? 'paste';
+    if (cur === 'write_points') {
+      if (trimmedCount < 3) {
+        setPointsError(true);
+        return;
+      }
+      // Soft-complete points: persist trimmed non-empty points and exit SessionShell.
+      setPointsError(false);
+      const finalized = pointsDraft.map((s) => s.trim()).filter((s) => s.length > 0);
+      await save({ id: sessionId, points: finalized });
+      onExit(); // keep phase as write_points; do not transition to elaborate
+      return;
+    }
     const next = nextPhase(cur);
     await setPhase(next);
-  }, [session?.phase, setPhase]);
+  }, [session?.phase, trimmedCount, save, sessionId, pointsDraft, setPhase]);
 
   const onSourceNotesChange = useCallback(
     async (val: string) => {
@@ -101,15 +144,31 @@ export function SessionShell({ userId, email, onSignOut, sessionId, onExit }: Se
     [save, sessionId]
   );
 
-  const onPointsChange = useCallback(
-    async (val: string) => {
-      setEditorText(val);
-      if ((session?.phase ?? 'paste') !== 'write_points') return;
-      const lines = val.split('\n').map((s) => s.trim()).filter((s) => s.length > 0);
-      await save({ id: sessionId, points: lines });
+  // Points mutations
+  const onChangePoint = useCallback(
+    async (index: number, value: string) => {
+      setPointsError(false);
+      setJustSubmitted(false);
+      setPointsDraft((prev) => {
+        const next = prev.slice();
+        next[index] = value;
+        void save({ id: sessionId, points: next });
+        return next;
+      });
     },
-    [save, session?.phase, sessionId]
+    [save, sessionId]
   );
+
+  const onAddPoint = useCallback(() => {
+    setPointsError(false);
+    setJustSubmitted(false);
+    setPointsDraft((prev) => {
+      if (prev.length >= 5) return prev;
+      const next = [...prev, ''];
+      void save({ id: sessionId, points: next });
+      return next;
+    });
+  }, [save, sessionId]);
 
   if (loading || !session) {
     return (
@@ -176,31 +235,38 @@ export function SessionShell({ userId, email, onSignOut, sessionId, onExit }: Se
         <main className={`editor-area ${showDrawer ? 'with-drawer' : ''}`}>
           {phase === 'hide_notes' ? (
             <HideConfirm onCancel={() => setPhase('paste')} onProceed={() => setPhase('write_points')} />
+          ) : phase === 'write_points' ? (
+            <WritePoints
+              points={pointsDraft}
+              onChangePoint={onChangePoint}
+              onAddPoint={onAddPoint}
+              showError={pointsError}
+              onClearError={() => setPointsError(false)}
+            />
           ) : (
             <textarea
               ref={editorRef}
               className="editor-textarea"
-              placeholder={
-                phase === 'write_points'
-                  ? 'Write your points — one per line…'
-                  : 'Editor — notes are visible only in Paste. Advance to hide notes.'
-              }
-              readOnly={phase !== 'write_points'}
+              placeholder="Editor — notes are visible only in Paste. Advance to hide notes."
+              readOnly
               value={editorText}
-              onChange={(e) => onPointsChange(e.target.value)}
+              onChange={() => {}}
             />
           )}
         </main>
       </div>
 
       <footer className="shell-footer">
-        <button
-          type="button"
-          onClick={() => void advance()}
-          disabled={phase === 'write_points'}
-        >
-          Advance (Ctrl/⌘+Enter)
-        </button>
+        <div className="row" style={{ gap: 8 }}>
+          {justSubmitted ? <span className="muted">Points submitted ✓</span> : null}
+          <button
+            type="button"
+            onClick={() => void advance()}
+            disabled={phase === 'write_points' ? !(trimmedCount >= 3 && trimmedCount <= 5) : false}
+          >
+            {phase === 'write_points' ? 'Done (Ctrl/⌘+Enter)' : 'Advance (Ctrl/⌘+Enter)'}
+          </button>
+        </div>
       </footer>
     </div>
   );
